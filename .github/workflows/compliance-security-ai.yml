@@ -1,0 +1,9 @@
+name: Compliance Security Ai
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'TODO'
