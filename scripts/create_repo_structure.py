@@ -3,8 +3,7 @@
 Create the repo folder structure and placeholder files.
 
 Rules:
-- All Markdown docs are created twice: under docs/en/... and docs/de/...
-  with identical relative paths and file names.
+- All Markdown docs are created under docs/en/... only.
 - Non-doc files (.github, workflows, scripts, bom, policies) are created once.
 - The script is idempotent (won't overwrite existing files by default).
 
@@ -250,23 +249,23 @@ def create_structure(root: Path, overwrite: bool) -> None:
     created += int(ok)
     skipped += int(not ok)
 
-    # Docs: en + de
-    for lang in ("en", "de"):
-        # Create base folders
-        for sd in DOC_SUBDIRS:
-            mkdirp(root / "docs" / lang / sd)
+    # Docs: en only
+    lang = "en"
+    # Create base folders
+    for sd in DOC_SUBDIRS:
+        mkdirp(root / "docs" / lang / sd)
 
-        # Create "dir only" folders
-        for dd in DOC_DIR_ONLY:
-            mkdirp(root / "docs" / lang / dd)
+    # Create "dir only" folders
+    for dd in DOC_DIR_ONLY:
+        mkdirp(root / "docs" / lang / dd)
 
-        # Create md files
-        for rel in DOC_FILES:
-            p = root / "docs" / lang / rel
-            ok = write_file(p, md_placeholder(
-                rel, lang=lang), overwrite=overwrite)
-            created += int(ok)
-            skipped += int(not ok)
+    # Create md files
+    for rel in DOC_FILES:
+        p = root / "docs" / lang / rel
+        ok = write_file(p, md_placeholder(
+            rel, lang=lang), overwrite=overwrite)
+        created += int(ok)
+        skipped += int(not ok)
 
     print(f"Done. created/overwritten={created}, skipped={skipped}")
     verify_acceptance(root)
@@ -275,12 +274,11 @@ def create_structure(root: Path, overwrite: bool) -> None:
 def verify_acceptance(root: Path) -> None:
     missing = []
 
-    # Acceptance docs must exist in BOTH langs
+    # Acceptance docs must exist in en
     for rel in ACCEPTANCE_DOCS:
-        for lang in ("en", "de"):
-            p = root / "docs" / lang / rel
-            if not p.exists():
-                missing.append(str(p.relative_to(root)))
+        p = root / "docs" / "en" / rel
+        if not p.exists():
+            missing.append(str(p.relative_to(root)))
 
     # Acceptance singleton files
     for rel in ACCEPTANCE_SINGLETON:
