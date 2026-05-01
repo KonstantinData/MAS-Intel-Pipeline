@@ -1,9 +1,320 @@
-name: Compliance Security Ai
+name: compliance-security-ai
+
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
-permissions: {}
+
+permissions:
+  contents: read
+
 jobs:
-  placeholder:
+  governance-gates:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - run: echo 'TODO'
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify required governance files and structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required_files = [
+              "docs/en/ai-act/risk-classification.md",
+              "docs/en/ai-act/provider-deployer-role-classification.md",
+              "docs/en/privacy/data-classification-policy.md",
+              "docs/en/privacy/model-privacy-policy.md",
+              "docs/en/privacy/audit-log-minimization-policy.md",
+              "docs/en/security/threat-model.md",
+              "docs/en/security/agent-to-agent-security.md",
+              "docs/en/models/model-routing-policy.md",
+              "docs/en/agents/agent-permission-matrix.md",
+              "docs/en/audit/logging-schema.md",
+              ".github/CODEOWNERS",
+              ".github/workflows/compliance-security-ai.yml",
+              ".github/workflows/release-attestation.yml",
+          ]
+          required_dirs = [
+              "bom/sbom",
+              "bom/ai-bom",
+              "bom/ml-bom",
+              "policies/rego",
+              "policies/opa",
+              "policies/agent-guardrails",
+              "policies/model-routing",
+              "policies/data-classification",
+              "policies/license",
+              "policies/tool-access",
+          ]
+          missing = [p for p in required_files if not Path(p).is_file()]
+          missing_dirs = [p for p in required_dirs if not Path(p).is_dir()]
+
+          problems = []
+          if missing:
+              problems.append("Missing required files:\n- " + "\n- ".join(missing))
+          if missing_dirs:
+              problems.append("Missing required directories:\n- " + "\n- ".join(missing_dirs))
+          if Path("docs/de").exists():
+              problems.append("docs/de must not exist. Repository is English-only.")
+
+          if problems:
+              raise SystemExit("\n\n".join(problems))
+          print("Governance structure checks passed.")
+          PY
+
+      - name: Ensure workflows are not placeholders
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          wf_dir = Path(".github/workflows")
+          placeholder_patterns = [
+              r"run:\s*echo\s+['\"]TODO['\"]",
+              r"^\s*placeholder:\s*$",
+          ]
+          failures = []
+          for p in wf_dir.glob("*.yml"):
+              text = p.read_text(encoding="utf-8")
+              for pattern in placeholder_patterns:
+                  if re.search(pattern, text, flags=re.MULTILINE):
+                      failures.append(f"{p}: matched placeholder pattern `{pattern}`")
+          if failures:
+              raise SystemExit("Placeholder workflow content found:\n- " + "\n- ".join(failures))
+          print("No workflow placeholders detected.")
+          PY
+
+  actions-hardening-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate workflow hardening baseline
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          disallowed_patterns = [
+              r"\bpull_request_target\b",
+              r"permissions:\s*write-all",
+              r"permissions:\s*\{\s*\}",
+          ]
+          workflow_files = sorted(Path(".github/workflows").glob("*.yml"))
+          if not workflow_files:
+              raise SystemExit("No workflow files found.")
+
+          failures = []
+          for wf in workflow_files:
+              text = wf.read_text(encoding="utf-8")
+              if "permissions:" not in text:
+                  failures.append(f"{wf}: missing top-level permissions block")
+              for pattern in disallowed_patterns:
+                  if re.search(pattern, text):
+                      failures.append(f"{wf}: matched disallowed pattern `{pattern}`")
+
+          if failures:
+              raise SystemExit("Hardening gate failed:\n- " + "\n- ".join(failures))
+          print("Workflow hardening baseline passed.")
+          PY
+
+  ai-bom-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate AI-BOM
+        run: |
+          python - <<'PY'
+          from datetime import datetime, UTC
+          from pathlib import Path
+          import json
+          import os
+
+          out = Path("bom/ai-bom/ai-bom.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+
+          data = {
+              "release_id": os.environ.get("GITHUB_REF_NAME", "manual"),
+              "commit": os.environ.get("GITHUB_SHA", "unknown"),
+              "generated_at": datetime.now(UTC).isoformat(),
+              "legal_scope": {
+                  "role": "REVIEW_REQUIRED",
+                  "use_case": "REVIEW_REQUIRED",
+                  "deployment_context": "REVIEW_REQUIRED",
+                  "cra_scope": "REVIEW_REQUIRED",
+                  "foss_scope": "REVIEW_REQUIRED",
+                  "reviewed_at": datetime.now(UTC).date().isoformat(),
+              },
+              "models": [
+                  {
+                      "id": "local-llm-001",
+                      "name": "example-local-model",
+                      "version": "0.0.0",
+                      "runtime": "local",
+                      "route": "local",
+                      "license": "REVIEW_REQUIRED",
+                      "hash": "sha256:REVIEW_REQUIRED",
+                      "hosting_location": "local",
+                  }
+              ],
+              "agents": [
+                  {
+                      "id": "code-agent",
+                      "version": "1.0.0",
+                      "role": "code_generation",
+                      "permissions": ["repo_read", "repo_write"],
+                  }
+              ],
+              "tools": [
+                  {
+                      "id": "python",
+                      "version": "system",
+                      "scope": "ci",
+                  }
+              ],
+              "datasets": [],
+          }
+          out.write_text(json.dumps(data, indent=2), encoding="utf-8")
+          print(f"Generated {out}")
+          PY
+
+      - name: Validate AI-BOM
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          p = Path("bom/ai-bom/ai-bom.json")
+          if not p.is_file():
+              raise SystemExit("AI-BOM file missing.")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          required_top = {"release_id", "commit", "generated_at", "legal_scope", "models", "agents", "tools", "datasets"}
+          missing = required_top - set(data.keys())
+          if missing:
+              raise SystemExit(f"AI-BOM missing keys: {sorted(missing)}")
+          if not isinstance(data["models"], list) or len(data["models"]) == 0:
+              raise SystemExit("AI-BOM models must contain at least one entry.")
+          if not isinstance(data["agents"], list) or len(data["agents"]) == 0:
+              raise SystemExit("AI-BOM agents must contain at least one entry.")
+          if not isinstance(data["tools"], list) or len(data["tools"]) == 0:
+              raise SystemExit("AI-BOM tools must contain at least one entry.")
+          print("AI-BOM validation passed.")
+          PY
+
+      - name: Upload AI-BOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-bom
+          path: bom/ai-bom/ai-bom.json
+          if-no-files-found: error
+
+  sbom-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate SBOM (CycloneDX JSON baseline)
+        run: |
+          python - <<'PY'
+          from datetime import datetime, UTC
+          from pathlib import Path
+          import hashlib
+          import json
+          import os
+
+          repo = Path(".")
+          files = []
+          for p in repo.rglob("*"):
+              if not p.is_file():
+                  continue
+              if ".git" in p.parts:
+                  continue
+              rel = p.as_posix()
+              digest = hashlib.sha256(p.read_bytes()).hexdigest()
+              files.append(
+                  {
+                      "type": "file",
+                      "name": rel,
+                      "version": "1",
+                      "hashes": [{"alg": "SHA-256", "content": digest}],
+                  }
+              )
+
+          sbom = {
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.5",
+              "version": 1,
+              "metadata": {
+                  "timestamp": datetime.now(UTC).isoformat(),
+                  "tools": [{"vendor": "github-actions", "name": "sbom-gate", "version": "1"}],
+                  "component": {
+                      "type": "application",
+                      "name": os.environ.get("GITHUB_REPOSITORY", "repository"),
+                      "version": os.environ.get("GITHUB_SHA", "unknown"),
+                  },
+              },
+              "components": files,
+          }
+
+          out = Path("bom/sbom/sbom.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(sbom, indent=2), encoding="utf-8")
+          print(f"Generated {out} with {len(files)} components.")
+          PY
+
+      - name: Validate SBOM
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          p = Path("bom/sbom/sbom.json")
+          if not p.is_file():
+              raise SystemExit("SBOM file missing.")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          required = {"bomFormat", "specVersion", "version", "metadata", "components"}
+          missing = required - set(data.keys())
+          if missing:
+              raise SystemExit(f"SBOM missing keys: {sorted(missing)}")
+          if data["bomFormat"] != "CycloneDX":
+              raise SystemExit("SBOM bomFormat must be CycloneDX.")
+          if not isinstance(data["components"], list) or len(data["components"]) == 0:
+              raise SystemExit("SBOM must contain at least one component.")
+          print("SBOM validation passed.")
+          PY
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: bom/sbom/sbom.json
+          if-no-files-found: error
