@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install type-check dependencies
-        run: python -m pip install --upgrade pip mypy
+        run: python -m pip install --upgrade pip mypy pytest
       - name: Run MyPy
         run: mypy
 
