@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from pathlib import Path
+import json
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+import check_github_actions_hardening as hardening  # noqa: E402
+import generate_ai_bom as gen_ai_bom  # noqa: E402
+import generate_release_attestation as gen_attestation  # noqa: E402
+import generate_sbom as gen_sbom  # noqa: E402
+import validate_ai_bom as val_ai_bom  # noqa: E402
+import validate_audit_schema as val_audit  # noqa: E402
+import validate_sbom as val_sbom  # noqa: E402
+
+
+def test_ai_bom_roundtrip(tmp_path: Path) -> None:
+    context = gen_ai_bom.resolve_context(
+        release_id="v-test",
+        commit="abc123",
+        generated_at="2026-01-01T00:00:00+00:00",
+    )
+    data = gen_ai_bom.build_ai_bom(context)
+    out = tmp_path / "ai-bom.json"
+    gen_ai_bom.write_ai_bom(out, data)
+    val_ai_bom.validate_ai_bom_file(out)
+
+
+def test_sbom_roundtrip(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.txt").write_text("hello", encoding="utf-8")
+    (repo / "b.py").write_text("print('x')", encoding="utf-8")
+
+    sbom_data = gen_sbom.build_sbom(repo)
+    out = tmp_path / "sbom.json"
+    gen_sbom.write_sbom(out, sbom_data)
+    val_sbom.validate_sbom(out)
+
+
+def test_release_attestation_roundtrip(tmp_path: Path) -> None:
+    ai_bom = tmp_path / "ai-bom.json"
+    sbom = tmp_path / "sbom.json"
+
+    context = gen_ai_bom.resolve_context(
+        release_id="v-test",
+        commit="abc123",
+        generated_at="2026-01-01T00:00:00+00:00",
+    )
+    gen_ai_bom.write_ai_bom(ai_bom, gen_ai_bom.build_ai_bom(context))
+    gen_sbom.write_sbom(
+        sbom,
+        {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "metadata": {"timestamp": "2026-01-01T00:00:00+00:00"},
+            "components": [{"type": "file", "name": "a", "version": "1"}],
+        },
+    )
+
+    data = gen_attestation.build_release_attestation(
+        ai_bom_path=ai_bom,
+        sbom_path=sbom,
+        release_id="v-test",
+        commit="abc123",
+    )
+    out = tmp_path / "release-attestation.json"
+    gen_attestation.write_attestation(out, data)
+    val_audit.validate_release_attestation(out)
+
+
+def test_workflow_hardening_detects_placeholder(tmp_path: Path) -> None:
+    wf = tmp_path / "test.yml"
+    wf.write_text(
+        "name: x\npermissions: {}\njobs:\n  placeholder:\n    runs-on: ubuntu-latest\n",
+        encoding="utf-8",
+    )
+    failures = hardening.check_workflow_hardening([wf])
+    assert failures
+    assert any("placeholder pattern" in f or "disallowed pattern" in f for f in failures)
+
+
+def test_repository_structure_validation(tmp_path: Path) -> None:
+    for rel in val_audit.REQUIRED_GOVERNANCE_FILES:
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("ok", encoding="utf-8")
+    for rel in val_audit.REQUIRED_GOVERNANCE_DIRS:
+        (tmp_path / rel).mkdir(parents=True, exist_ok=True)
+
+    val_audit.validate_repository_structure(tmp_path)

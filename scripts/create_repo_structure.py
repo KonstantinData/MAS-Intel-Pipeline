@@ -135,6 +135,8 @@ SINGLETON_FILES = [
     "scripts/check_github_actions_hardening.py",
     "scripts/generate_release_attestation.py",
     "scripts/validate_audit_schema.py",
+    "scripts/generate_sbom.py",
+    "scripts/validate_sbom.py",
 ]
 
 # From "2.2 Abnahmekriterium" (paths are WITHOUT language prefix in the spec)
