@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from pathlib import Path
 import argparse
 import hashlib
 import json
 import os
-
+from datetime import UTC, datetime
+from pathlib import Path
 
 EXCLUDED_DIR_NAMES = {".git", "venv", "__pycache__", ".pytest_cache"}
 

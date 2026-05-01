@@ -24,6 +24,7 @@ Use these files for every new task:
 - START_SCRIPT.md
 - MULTI_ROLE_TASK_TEMPLATE.md
 - ROLE_ROUTING_RULES.md
+- CODE_REVIEW_CHECKLIST.md
 
 Automation script:
 - scripts/init_multi_role_task.ps1 generates prompts/current-task.md with auto-selected specialist roles and conflict order.
@@ -40,6 +41,7 @@ Automation script:
 | Agent Security Owner | agent-security-owner | Agent Security Gate |
 | License Owner | license-owner | License Gate |
 | Human Reviewer | human-reviewer | Human Approval Gate |
+| Code Reviewer | code-reviewer | Code Review Gate |
 | Release Manager | release-manager | Release Gate |
 | Audit Owner | audit-owner | Audit Gate |
 | Maintainer | maintainer | Quality Gate |

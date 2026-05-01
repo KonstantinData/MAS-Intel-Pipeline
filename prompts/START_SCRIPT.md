@@ -39,6 +39,7 @@ Each task is executed from prompts/current-task.md with:
 - one shared specialist plan
 - gate rules
 - conflict priority
+- code review evidence via CODE_REVIEW_CHECKLIST.md
 - consolidated final report
 
 ## 5) Dynamic role expansion during execution

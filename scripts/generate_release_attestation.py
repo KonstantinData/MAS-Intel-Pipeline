@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from pathlib import Path
 import argparse
 import hashlib
 import json
 import os
+from datetime import UTC, datetime
+from pathlib import Path
 
 
 def sha256_of(path: Path) -> str:

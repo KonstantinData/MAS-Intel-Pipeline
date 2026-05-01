@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import argparse
 import json
-
+from pathlib import Path
 
 REQUIRED_GOVERNANCE_FILES = [
     "docs/en/ai-act/risk-classification.md",

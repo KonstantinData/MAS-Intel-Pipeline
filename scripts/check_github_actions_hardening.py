@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import argparse
 import re
-
+from pathlib import Path
 
 DISALLOWED_PATTERNS = [
     r"\bpull_request_target\b",
@@ -16,6 +15,7 @@ DISALLOWED_PATTERNS = [
 PLACEHOLDER_PATTERNS = [
     r"run:\s*echo\s+['\"]TODO['\"]",
     r"^\s*placeholder:\s*$",
+    r"python\s*-\s*<<['\"]?PY['\"]?",
 ]
 
 

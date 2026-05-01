@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import argparse
 import json
-
+from pathlib import Path
 
 REQUIRED_TOP_LEVEL = {
     "release_id",
@@ -44,7 +43,8 @@ def validate_ai_bom_data(data: dict) -> None:
 
     for key in ("models", "agents", "tools"):
         entries = data.get(key)
-        _require(isinstance(entries, list), f"AI-BOM {key} must be a list.")
+        if not isinstance(entries, list):
+            raise SystemExit(f"AI-BOM {key} must be a list.")
         _require(len(entries) > 0, f"AI-BOM {key} must contain at least one entry.")
 
     _require(isinstance(data.get("datasets"), list), "AI-BOM datasets must be a list.")

@@ -13,6 +13,7 @@ These rules define which specialists are required for a task.
 - docs/en/audit -> audit-owner
 - release artifacts or release workflows -> release-manager
 - critical agent decisions or human oversight requirements -> human-reviewer
+- code quality/maintainability/readability/refactoring risks -> code-reviewer
 - product/use-case/requirements definitions -> product-owner
 - code/tests/scripts/CI implementation work -> maintainer
 
@@ -28,14 +29,15 @@ Keyword examples:
 - Release: release, signing, attestation, artifact
 - Audit: audit trail, evidence retention, archiving
 - Human Review: critical decision, human approval, escalation
+- Code Review: code review, readability, maintainability, refactor risk, complexity
 - Product: use case, requirements, product goal
 - Maintainer: implementation, bugfix, tests, refactor
 
 ## 3) Target-state required roles
 
-- Baseline: at least maintainer
-- Release-ready: at least security-architect, ai-compliance-owner, release-manager, maintainer
-- Audit-ready: at least audit-owner, ai-compliance-owner, security-architect, maintainer
+- Baseline: at least code-reviewer, maintainer
+- Release-ready: at least security-architect, ai-compliance-owner, release-manager, code-reviewer, maintainer
+- Audit-ready: at least audit-owner, ai-compliance-owner, security-architect, code-reviewer, maintainer
 
 ## 4) Dynamic expansion during execution
 
@@ -48,6 +50,7 @@ If new evidence appears, add roles immediately:
 - new audit/retention requirement -> add audit-owner
 - new release/signature concern -> add release-manager
 - critical autonomous decision -> add human-reviewer
+- maintainability or readability regressions -> add code-reviewer
 
 ## 5) Conflict priority for gate decisions
 
@@ -61,5 +64,6 @@ Default order:
 7. license-owner
 8. audit-owner
 9. human-reviewer
-10. product-owner
-11. maintainer
+10. code-reviewer
+11. product-owner
+12. maintainer

@@ -26,8 +26,9 @@ $priority = @{
     "license-owner"           = 7
     "audit-owner"             = 8
     "human-reviewer"          = 9
-    "product-owner"           = 10
-    "maintainer"              = 11
+    "code-reviewer"           = 10
+    "product-owner"           = 11
+    "maintainer"              = 12
 }
 
 $catalog = @(
@@ -86,6 +87,13 @@ $catalog = @(
         output = "Human-approval-gate assessment for critical decisions."
         keywords = @("critical decision", "human approval", "escalation", "oversight")
         scopeHints = @("docs/en/agents", "docs/en/ai-governance")
+    },
+    @{
+        id = "code-reviewer"
+        goal = "Evaluate readability, maintainability, complexity, and review quality."
+        output = "Code-review-gate assessment with concrete maintainability findings."
+        keywords = @("code review", "readability", "maintainability", "complexity", "review quality")
+        scopeHints = @("scripts", "tests", ".github/workflows")
     },
     @{
         id = "release-manager"
@@ -148,17 +156,20 @@ foreach ($role in $catalog) {
 switch ($TargetState) {
     "Baseline" {
         [void]$selectedRoleIds.Add("maintainer")
+        [void]$selectedRoleIds.Add("code-reviewer")
     }
     "Release-ready" {
         [void]$selectedRoleIds.Add("security-architect")
         [void]$selectedRoleIds.Add("ai-compliance-owner")
         [void]$selectedRoleIds.Add("release-manager")
+        [void]$selectedRoleIds.Add("code-reviewer")
         [void]$selectedRoleIds.Add("maintainer")
     }
     "Audit-ready" {
         [void]$selectedRoleIds.Add("audit-owner")
         [void]$selectedRoleIds.Add("ai-compliance-owner")
         [void]$selectedRoleIds.Add("security-architect")
+        [void]$selectedRoleIds.Add("code-reviewer")
         [void]$selectedRoleIds.Add("maintainer")
     }
 }

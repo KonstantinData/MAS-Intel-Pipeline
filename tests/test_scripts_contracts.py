@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
 import sys
+from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
@@ -95,3 +96,51 @@ def test_repository_structure_validation(tmp_path: Path) -> None:
         (tmp_path / rel).mkdir(parents=True, exist_ok=True)
 
     val_audit.validate_repository_structure(tmp_path)
+
+
+def test_validate_ai_bom_rejects_missing_models(tmp_path: Path) -> None:
+    invalid = {
+        "release_id": "x",
+        "commit": "y",
+        "generated_at": "2026-01-01T00:00:00+00:00",
+        "legal_scope": {
+            "role": "REVIEW_REQUIRED",
+            "use_case": "REVIEW_REQUIRED",
+            "deployment_context": "REVIEW_REQUIRED",
+            "cra_scope": "REVIEW_REQUIRED",
+            "foss_scope": "REVIEW_REQUIRED",
+            "reviewed_at": "2026-01-01",
+        },
+        "models": [],
+        "agents": [{"id": "a", "version": "1", "role": "r", "permissions": []}],
+        "tools": [{"id": "t", "version": "1", "scope": "ci"}],
+        "datasets": [],
+    }
+    path = tmp_path / "invalid-ai-bom.json"
+    path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        val_ai_bom.validate_ai_bom_file(path)
+
+
+def test_validate_attestation_rejects_failed_gate(tmp_path: Path) -> None:
+    invalid = {
+        "release_id": "v-test",
+        "commit": "abc123",
+        "generated_at": "2026-01-01T00:00:00+00:00",
+        "repository": "owner/repo",
+        "workflow_run_id": "1",
+        "workflow_run_url": "https://github.com/owner/repo/actions/runs/1",
+        "artifacts": {
+            "ai_bom": {"path": "bom/ai-bom/ai-bom.json", "sha256": "x"},
+            "sbom": {"path": "bom/sbom/sbom.json", "sha256": "y"},
+        },
+        "gate_results": {
+            "governance": "PASSED",
+            "security": "FAILED",
+            "release_integrity": "PASSED",
+        },
+    }
+    path = tmp_path / "invalid-attestation.json"
+    path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        val_audit.validate_release_attestation(path)
