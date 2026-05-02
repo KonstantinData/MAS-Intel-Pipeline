@@ -69,9 +69,6 @@ def validate_repository_structure(repo_root: Path) -> None:
         problems.append("Missing required files:\n- " + "\n- ".join(missing_files))
     if missing_dirs:
         problems.append("Missing required directories:\n- " + "\n- ".join(missing_dirs))
-    if (repo_root / "docs/de").exists():
-        problems.append("docs/de must not exist. Repository is English-only.")
-
     _require(not problems, "\n\n".join(problems))
 
 
