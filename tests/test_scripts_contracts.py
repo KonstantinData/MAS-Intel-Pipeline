@@ -98,6 +98,21 @@ def test_repository_structure_validation(tmp_path: Path) -> None:
     val_audit.validate_repository_structure(tmp_path)
 
 
+def test_repository_structure_allows_german_docs(tmp_path: Path) -> None:
+    for rel in val_audit.REQUIRED_GOVERNANCE_FILES:
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("ok", encoding="utf-8")
+    for rel in val_audit.REQUIRED_GOVERNANCE_DIRS:
+        (tmp_path / rel).mkdir(parents=True, exist_ok=True)
+
+    de_doc = tmp_path / "docs" / "de" / "architecture" / "EU-Compliant-Roadmap-for-MAS.md"
+    de_doc.parent.mkdir(parents=True, exist_ok=True)
+    de_doc.write_text("ok", encoding="utf-8")
+
+    val_audit.validate_repository_structure(tmp_path)
+
+
 def test_validate_ai_bom_rejects_missing_models(tmp_path: Path) -> None:
     invalid = {
         "release_id": "x",

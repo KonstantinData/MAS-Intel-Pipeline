@@ -219,3 +219,7 @@ __marimo__/
 
 # Video files
 *.mp4
+
+# Generated BOM artifacts
+bom/ai-bom/ai-bom.json
+bom/sbom/sbom.json
